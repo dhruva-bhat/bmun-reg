@@ -2,7 +2,7 @@
 
 function doGet() {
   var user = WebApp_.requireStaff();
-  var t = HtmlService.createTemplateFromFile('CheckIn');
+  var t = HtmlService.createTemplateFromFile('Desk');
   t.user = user;
   return t.evaluate().setTitle('BMUN Check-in').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
