@@ -4,6 +4,7 @@
  */
 var Waivers = (function () {
   var N = typeof require !== 'undefined' ? require('./Normalize') : Normalize;
+  var Ids_ = typeof require !== 'undefined' ? require('./Ids') : Ids;
   var MAX_NEAR_DISTANCE = 2;
 
   /**
@@ -85,7 +86,41 @@ var Waivers = (function () {
     return w;
   }
 
-  return { match: match, run: run, confirm: confirm, link: link, openCandidates: openCandidates };
+  var DEFAULT_COLUMNS = {
+    timestamp: 'Timestamp',
+    participant_name: 'Participant Name',
+    date_of_birth: 'Date of Birth',
+    signer: 'Signer Name',
+  };
+
+  /**
+   * Copy raw form responses (kept read-only) into Waiver rows. Idempotent: a response is
+   * identified by timestamp + normalized name, so re-running never duplicates rows.
+   * A parent-signed waiver counts for the participant named on the form.
+   */
+  function ingest(state, rawRows, columns) {
+    var col = Object.assign({}, DEFAULT_COLUMNS, columns || {});
+    var seen = {};
+    state.waivers.forEach(function (w) { seen[String(w.timestamp) + '|' + N.name(w.participant_name)] = true; });
+    var added = 0;
+    rawRows.forEach(function (r) {
+      var name = String(r[col.participant_name] || '').trim();
+      if (!name) return;
+      var key = String(r[col.timestamp]) + '|' + N.name(name);
+      if (seen[key]) return;
+      seen[key] = true;
+      state.waivers.push({
+        waiver_id: Ids_.next('waiver', state.waivers.map(function (w) { return w.waiver_id; })),
+        timestamp: r[col.timestamp], participant_name: name,
+        date_of_birth: r[col.date_of_birth] || '', signer: r[col.signer] || '',
+        matched_delegate_id: '', match_status: '',
+      });
+      added++;
+    });
+    return added;
+  }
+
+  return { ingest: ingest, DEFAULT_COLUMNS: DEFAULT_COLUMNS, match: match, run: run, confirm: confirm, link: link, openCandidates: openCandidates };
 })();
 
 if (typeof module !== 'undefined') module.exports = Waivers;

@@ -63,3 +63,15 @@ test('two delegates with the same name go to review rather than guessing', () =>
   assert.strictEqual(r.linked, 0);
   assert.strictEqual(r.review[0].candidates.length, 2);
 });
+
+test('ingest copies form responses once and a parent-signed form counts for the participant', () => {
+  const s = { waivers: [] };
+  const rows = [
+    { Timestamp: '10/1 9:00', 'Participant Name': 'Kid One', 'Signer Name': 'Parent One', 'Date of Birth': '2010-01-01' },
+    { Timestamp: '10/1 9:05', 'Participant Name': '', 'Signer Name': 'Blank' },
+  ];
+  assert.strictEqual(Waivers.ingest(s, rows), 1);
+  assert.strictEqual(Waivers.ingest(s, rows), 0);
+  assert.strictEqual(s.waivers[0].participant_name, 'Kid One');
+  assert.strictEqual(s.waivers[0].waiver_id, 'W0001');
+});
